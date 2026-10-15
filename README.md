@@ -1,7 +1,7 @@
 # 🪐 Litikj Agent Framework
 
 <p align="center">
-  <img src="desktop/src/assets/logo.png" alt="Litikj Agent Framework" width="120" onerror="this.style.display='none'"/>
+  <img src="desktop/src/assets/logo.png" alt="Litikj Agent Framework" width="120"/>
 </p>
 
 <p align="center">
