@@ -268,8 +268,8 @@ class KernelApiRequestHandler(SimpleHTTPRequestHandler):
             return True
 
         # 6. 会话 Token 认证 (SEC-01 & SEC-08)
-        # 公开免密通道：健康体检
-        if path in ("/health", "/api/health"):
+        # 公开免密通道：健康体检与受信任 Origin 会话 Token 握手通道 (Web Dev 模式安全兜底)
+        if path in ("/health", "/api/health", "/api/auth/token"):
             return True
 
         # 提取请求携带的 Token
@@ -325,6 +325,10 @@ class KernelApiRequestHandler(SimpleHTTPRequestHandler):
         if path in ("/health", "/api/health"):
             cm = ConfigManager.get_instance()
             self._send_json({"status": "ok", "version": cm.version, "engine": "liti-agent-os"})
+            return
+
+        if path == "/api/auth/token":
+            self._send_json({"token": get_server_token()})
             return
 
         if path == "/api/system":

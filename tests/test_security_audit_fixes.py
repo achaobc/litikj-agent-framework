@@ -293,18 +293,31 @@ class TestSecurityDefenses:
             data = json.loads(resp.read().decode("utf-8"))
             assert "version" in data
 
-    def test_sec01_auth_token_endpoint_retired(self):
-        """测试 /api/auth/token 免密端点已被彻底废除，未携带 Token 发起请求直接 401 拦截 (SEC-01)"""
+    def test_sec01_auth_token_handshake_endpoint(self):
+        """测试 /api/auth/token 在受信任白名单 Origin 下支持安全握手，对外部非法域严格 403 阻断 (SEC-01)"""
         url = f"http://127.0.0.1:{self.port}/api/auth/token"
-        req = urllib.request.Request(
+
+        # 1. 受信任本地 Origin (如 Web Dev 端口 http://localhost:1420) 发起握手 -> 200 OK 且返回合法 Token
+        from apps.server.api_server import get_server_token
+        req_local = urllib.request.Request(
             url,
-            headers={"Origin": "tauri://localhost", "Host": f"127.0.0.1:{self.port}"}
+            headers={"Origin": "http://localhost:1420", "Host": f"127.0.0.1:{self.port}"}
+        )
+        with urllib.request.urlopen(req_local, timeout=5) as resp:
+            assert resp.status == 200
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data.get("token") == get_server_token()
+
+        # 2. 外部恶意域 (https://evil.com) 发起握手 -> 403 Forbidden 严格阻断
+        req_evil = urllib.request.Request(
+            url,
+            headers={"Origin": "https://evil.com", "Host": f"127.0.0.1:{self.port}"}
         )
         try:
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                assert False, "公开 /api/auth/token 接口未被 401 拦截！"
+            with urllib.request.urlopen(req_evil, timeout=5) as resp:
+                assert False, "外部恶意域访问 /api/auth/token 未被 403 拦截！"
         except urllib.error.HTTPError as e:
-            assert e.code == 401
+            assert e.code == 403
 
     def test_sec01_no_origin_without_token_strictly_blocked(self):
         """测试本地脚本/curl (未带 Origin 头) 在缺失 Token 时必须被严格 401 阻断 (SEC-01)"""

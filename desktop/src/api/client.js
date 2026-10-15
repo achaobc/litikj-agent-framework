@@ -27,31 +27,60 @@ export function getAuthToken() {
   return '';
 }
 
+let initAuthTokenPromise = null;
+
 export async function initAuthToken() {
   if (authToken) return authToken;
   if (typeof window !== 'undefined' && window.__LITIKJ_API_TOKEN__) {
     authToken = window.__LITIKJ_API_TOKEN__;
     return authToken;
   }
-  // 优先通过 Tauri IPC 原生指令通道获取会话私密 Token (安全隔离，无网络暴露面)
-  if (typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__)) {
+  if (initAuthTokenPromise) {
+    return initAuthTokenPromise;
+  }
+
+  initAuthTokenPromise = (async () => {
+    // 优先通过 Tauri IPC 原生指令通道获取会话私密 Token (安全隔离，无网络暴露面)
+    if (typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__)) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const t = await invoke('get_session_token');
+        if (t) {
+          authToken = t;
+          window.__LITIKJ_API_TOKEN__ = t;
+          return authToken;
+        }
+      } catch (e) {
+        console.warn('[client] 获取 Tauri Session Token 失败:', e);
+      }
+    }
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_LITIKJ_API_TOKEN) {
+      authToken = import.meta.env.VITE_LITIKJ_API_TOKEN;
+      return authToken;
+    }
+
+    // 纯浏览器 Web Dev 模式：向微内核安全请求握手 Token (仅受信任本地白名单 Origin 可达)
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      const t = await invoke('get_session_token');
-      if (t) {
-        authToken = t;
-        window.__LITIKJ_API_TOKEN__ = t;
-        return authToken;
+      const res = await fetch(`${baseUrl}/api/auth/token`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.token) {
+          authToken = data.token;
+          if (typeof window !== 'undefined') {
+            window.__LITIKJ_API_TOKEN__ = data.token;
+          }
+          return authToken;
+        }
       }
     } catch (e) {
-      console.warn('[client] 获取 Tauri Session Token 失败:', e);
+      console.warn('[client] 请求 /api/auth/token 握手失败:', e);
     }
-  }
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_LITIKJ_API_TOKEN) {
-    authToken = import.meta.env.VITE_LITIKJ_API_TOKEN;
-    return authToken;
-  }
-  return '';
+    return '';
+  })().finally(() => {
+    initAuthTokenPromise = null;
+  });
+
+  return initAuthTokenPromise;
 }
 
 async function request(endpoint, options = {}) {
