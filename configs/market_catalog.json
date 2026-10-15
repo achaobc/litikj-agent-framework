@@ -1,0 +1,21 @@
+[
+  {
+    "id": "hello_skill",
+    "name": "示范问候与打卡技能",
+    "display_name": "示范问候与打卡技能",
+    "version": "1.0.0",
+    "author": "Litikj Open Source Team",
+    "category": "开发示范",
+    "icon": "👋",
+    "description": "开源微内核标准示范技能：演示参数传递、结构化输出与产物落盘",
+    "size": "2 KB",
+    "size_kb": 2,
+    "sha256": "76d4fc7cb9a25afa64282d2aa3294fbbe75decdf894e8369eb799ca1a5365602",
+    "required_role": "free",
+    "role_name": "开源社区免费",
+    "badge_color": "emerald",
+    "capsule_filename": "hello_skill_v1.0.0.skill",
+    "download_url": "",
+    "origin": "custom"
+  }
+]

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "omni_sentinel",
+    "name": "全维调度哨兵 (Omni Sentinel)",
+    "display_name": "全维调度哨兵 (Omni Sentinel)",
+    "version": "1.0.0",
+    "author": "Litikj Open Source Team",
+    "category": "系统基准",
+    "icon": "🛡️",
+    "description": "立体空间标杆智能体：演示对话启动、0-Token直达、定时打卡与事件驱动四维调度",
+    "skills": [],
+    "size": "16 KB",
+    "size_kb": 16,
+    "sha256": "09c61d6e589dbef3edc604320c435c49a0ffa77eb7864b5ebe4d9ba3369d0854",
+    "required_role": "guest",
+    "role_name": "系统官方内置",
+    "badge_color": "emerald",
+    "capsule_filename": "omni_sentinel_v1.0.0.agent",
+    "download_url": ""
+  }
+]

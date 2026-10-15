@@ -1,0 +1,51 @@
+# ========================================================
+# 🤖 Litikj Agent Framework · Cursor AI Rules
+# ========================================================
+# 适用范围：所有使用 Cursor 进行智能体、技能与工作流开发的开发者与助手
+# 核心规范：对齐 docs/AGENT_SPEC.md 工业级标准规约手册
+
+You are an expert architect for the Litikj Agent Framework (<40MB local-first end-side agent OS microkernel).
+When generating or modifying agents, skills, and workflows, ALWAYS follow these strict iron laws:
+
+## 1. SOP §4.3 ZERO Top-Level Third-Party Imports (HIGHEST PRIORITY)
+- In `entry.py` and `tools/*.py`, NEVER import non-standard Python packages at the module level!
+- Standard library (`os`, `sys`, `json`, `time`, `pathlib`, `typing`, `re`, `hashlib`, etc.) and microkernel base (`core.*`) are allowed at the top level.
+- Heavy/optional packages (`requests`, `PIL`, `torch`, `faster_whisper`, `playwright`, etc.) MUST be imported lazily inside specific methods or tool functions.
+- Rationale: The embedded Python microkernel discovers agents dynamically; a top-level `ImportError` crashes discovery before fail-early guards can run.
+
+## 2. StandardAgent Inheritance Contract
+- All agents MUST inherit from `core.standard_agent.StandardAgent`.
+- Provide `setup(registry: Registry)` hook in `entry.py`.
+- Define `CONFIG_SCHEMA` (JSON Schema) and `DEFAULT_CONFIG` for metadata-driven dynamic settings rendering.
+- Directory layout:
+  ```
+  agents/<agent_name>/
+  ├── config.yaml
+  ├── entry.py
+  ├── README.md
+  ├── persona/prompt.md
+  └── tools/
+  ```
+
+## 3. 0-Token Fast-Path Protocol
+- Everyday inspection/status commands MUST NOT consume LLM tokens.
+- Supported base commands: `[EXEC] ping`, `[EXEC] check`, `[EXEC] heal`, `[EXEC] config`, `[EXEC] set <k> <v>`, `[EXEC] help`.
+- Custom commands should override `handle_custom_fast_path(self, command: str) -> Optional[str]`.
+
+## 4. Fail-Early Inspection & Zero-Friction Self-Healing
+- Declare `DROP_BOX_DIRS`, `REQUIRED_PACKAGES`, and `PreflightItem` instances.
+- Never pretend success or crash silently when dependencies are missing.
+- Implement `heal_environment()` for automatic recovery.
+
+## 5. Content-First & No Hardcoded Templates
+- All content extractions must derive from genuine input text or audio transcripts.
+- Fall back gracefully to `core.nlp_extractor.HeuristicNLPExtractor` when LLM is unavailable.
+
+## 6. CLI Commands Reference
+- `python run.py diagnose`: Microkernel health check
+- `python run.py list`: List active plugins
+- `python run.py new agent <name>`: Create compliant agent scaffold
+- `python run.py new workflow <name>`: Create compliant workflow scaffold
+- `python run.py run <agent> [payload]`: Batch task execution
+- `python run.py chat [agent]`: Interactive REPL session
+- `python run.py workflow <name>`: Multi-agent pipeline execution

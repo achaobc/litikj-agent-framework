@@ -1,0 +1,26 @@
+[
+  {
+    "id": "system_health_audit",
+    "name": "系统全维健康审计流水线",
+    "display_name": "系统全维健康审计流水线",
+    "version": "1.0.0",
+    "author": "Litikj Open Source Team",
+    "category": "系统基准",
+    "icon": "🛡️",
+    "description": "立体空间标杆基准协同流水线：全维哨兵硬件巡检 ➔ 人机审批把关 ➔ 持久化审计归档",
+    "dependencies": {
+      "agents": [
+        "omni_sentinel"
+      ],
+      "skills": []
+    },
+    "size": "1 KB",
+    "size_kb": 1,
+    "sha256": "6a7cb5a9b99996b1c695448af56cba1817cc916c460ee3c753d857607025d5ff",
+    "required_role": "guest",
+    "role_name": "系统官方内置",
+    "badge_color": "emerald",
+    "capsule_filename": "system_health_audit_v1.0.0.flow",
+    "download_url": ""
+  }
+]

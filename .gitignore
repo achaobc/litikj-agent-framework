@@ -1,0 +1,107 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment Variables & Credentials
+.env
+*.local
+*.key
+*.pem
+secrets/
+.secrets.yaml
+*.secrets.yaml
+configs/.secrets.yaml
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Workspace Runtime Data & Outputs
+workspace/data/*
+!workspace/data/.gitkeep
+workspace/outputs/*
+!workspace/outputs/.gitkeep
+workspace/drop_box/*
+!workspace/drop_box/.gitkeep
+workspace/drop_box/videos/*
+!workspace/drop_box/videos/.gitkeep
+workspace/drop_box/courseware/*
+!workspace/drop_box/courseware/.gitkeep
+
+# Embedded Runtime (built on-demand by scripts/prepare_runtime.py)
+runtime/
+
+# Media Files & Large Assets
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.wav
+*.mp3
+
+# Custom Agents (protect user private agents, keep README.md)
+workspace/custom_agents/*
+!workspace/custom_agents/README.md
+
+# Sensitive Credentials & Archive Bundles
+*cookie*.json
+.license_cache.json
+*.zip
+*.tar.gz
+*.rar
+
+# Logs
+*.log
+workspace/logs/*
+!workspace/logs/.gitkeep
+
+# Temporary cache
+workspace/cache/*
+!workspace/cache/.gitkeep
+
+# Desktop / Frontend (Node / Vite / Tailwind)
+node_modules/
+desktop/node_modules/
+desktop/dist/
+desktop/.vite/
+
+# Desktop / Tauri / Rust
+desktop/src-tauri/target/
+release/
+*.exe
+
+# Server Deployment & Remote Credentials (protect remote IP & operations guide)
+*server*.md
+*remote*.md
+*.credential*
+deploy_config*

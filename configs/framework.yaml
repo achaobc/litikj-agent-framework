@@ -1,0 +1,55 @@
+# ========================================================
+# 👑 【立体空间智能体框架 · 核心配置 (Litikj Agent Framework)】
+# ========================================================
+# 这是一个纯净通用的微内核底座配置，支持 100% 离线本地自治 (Local-First)。
+# 开发者可自由配置本地 Ollama 模型或兼容 OpenAI 的自定义 API Key。
+# ========================================================
+
+system:
+  name: "立体空间智能体系统 (Litikj Agent Framework)"
+  version: "2.5.0"
+  workspace_dir: "workspace"
+  agents_dir: "agents"
+  skills_dir: "skills"
+  workflows_dir: "workflows"
+  log_level: "INFO"
+  extra_agent_dirs:
+    - "workspace/custom_agents"
+
+# ========================================================
+# 📂 通用投递箱与外设监听引擎 (Watcher Engine)
+# ========================================================
+watcher:
+  enabled: true
+  poll_interval: 2.0        # 扫描轮询周期 (秒)
+  settle_seconds: 2.0       # 文件写入稳定等待时间 (秒)
+  rules:
+    - name: "omni_sentinel_drop_box"
+      directory: "workspace/drop_box"
+      file_patterns: ["*.*"]
+      trigger_type: "agent"
+      target: "omni_sentinel"
+      enabled: true
+
+# ========================================================
+# ⚡ 快速直达协议 (Fast-Path Protocol)
+# ========================================================
+fast_path:
+  prefix: "[EXEC]"
+  enabled: true
+
+# ========================================================
+# 🌐 大模型网关与商业授权 (LLM Gateway & Local Provider)
+# ========================================================
+gateway:
+  endpoint: "https://www.litikj.com/api"
+  license_key: ""
+  mode: "custom"             # 默认采用开发者自定义/本地私有模型模式 (100% 离线可用)
+  max_input_chars: 25000
+  rate_limit_interval: 0.5
+  custom:
+    provider: "custom"
+    api_key: ""              # 自定义模型的 API Key (如 DeepSeek / Qwen，使用 Ollama 本地模型时可留空)
+    base_url: "https://api.deepseek.com/v1"
+    model: "deepseek-chat"
+    temperature: 0.7

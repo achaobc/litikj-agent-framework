@@ -1,0 +1,60 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "立体空间智能体系统",
+  "version": "2.5.0",
+  "identifier": "com.litikj.agentos",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "立体空间智能体系统 (Liti Space Agent Studio)",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 900,
+        "minHeight": 620,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' tauri: localhost:*; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://127.0.0.1:* http://localhost:* https:; media-src 'self' data: blob: http://127.0.0.1:* http://localhost:*; connect-src 'self' tauri: http://127.0.0.1:* http://localhost:* https://www.litikj.com https://api.litikj.com; font-src 'self' data:;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../../runtime": "runtime",
+      "../../apps": "apps",
+      "../../core": "core",
+      "../../configs": "configs",
+      "../../agents": "agents",
+      "../../skills": "skills",
+      "../../workflows": "workflows",
+      "../../scripts": "scripts",
+      "../../workspace/drop_box": "workspace/drop_box",
+      "../../workspace/outputs": "workspace/outputs",
+      "../../workspace/data": "workspace/data",
+      "../../release/capsules": "release/capsules",
+      "../../一键启动智能体工作台.bat": "一键启动智能体工作台.bat"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

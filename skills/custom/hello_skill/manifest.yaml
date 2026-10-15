@@ -1,0 +1,33 @@
+# ========================================================
+# 📋 【开源示范原子技能 · Hello Skill 元数据配置】
+# ========================================================
+id: "hello_skill"
+name: "示范问候与打卡技能"
+display_name: "示范问候与打卡技能"
+version: "1.0.0"
+author: "Litikj Open Source Team"
+icon: "👋"
+category: "开发示范"
+origin: "custom"
+description: "开源微内核标准示范技能：演示参数传递、结构化输出与产物落盘"
+tags: ["示范", "Hello", "快速上手", "开源基准"]
+
+inputs:
+  - name: "name"
+    type: "string"
+    required: false
+    default: "开发者"
+    desc: "问候对象名称"
+  - name: "topic"
+    type: "string"
+    required: false
+    default: "开源智能体开发"
+    desc: "交互主题"
+
+outputs:
+  - name: "message"
+    type: "string"
+    desc: "生成的问候消息"
+  - name: "file_path"
+    type: "string"
+    desc: "落盘保存的成果文件路径"

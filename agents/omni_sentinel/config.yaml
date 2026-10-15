@@ -1,0 +1,75 @@
+name: "omni_sentinel"
+display_name: "全维调度哨兵 (Omni Sentinel)"
+version: "1.1.0"
+icon: "🛡️"
+category: "系统基准"
+description: "立体空间标杆智能体：继承 StandardAgent 标准基类，演示通用配置面板、0-Token直达、环境自检自愈、定时打卡与事件驱动全维调度"
+author: "Litikj Developer"
+
+# ========================================================
+# 🎨 UI 交互动态元数据 (供工作台纯动态渲染，告别前端硬编码)
+# ========================================================
+quick_chips:
+  - "⚡ [EXEC] ping (0-Token 毫秒级心跳回路)"
+  - "🔍 [EXEC] check (全景环境与依赖体检)"
+  - "🩹 [EXEC] heal (一键环境全自动静默自愈)"
+  - "⚙️ [EXEC] config (查看通用设置面板)"
+  - "📊 [EXEC] status (0-Token 极速底座巡检)"
+  - "📋 [EXEC] report (0-Token 立即生成巡检报告)"
+  - "💻 [EXEC] demo (演示微内核代码与悬浮复制)"
+  - "💡 智能体系统如何与大模型协同？"
+  - "💡 请用一段话简短阐述：为何智能体系统需要混合调度？"
+
+skills: []
+
+actions:
+  - label: "环境体检"
+    command: "[EXEC] check"
+    icon: "🔍"
+  - label: "一键自愈"
+    command: "[EXEC] heal"
+    icon: "🩹"
+  - label: "设置配置"
+    command: "[EXEC] config"
+    icon: "⚙️"
+  - label: "底座巡检"
+    command: "[EXEC] status"
+    icon: "📊"
+  - label: "心跳检测"
+    command: "[EXEC] ping"
+    icon: "⚡"
+
+# ========================================================
+# ⚡ 四维触发模式核心声明
+# ========================================================
+triggers:
+  fast_path:
+    enabled: true
+    prefix: "[EXEC]"
+    commands:
+      - "ping"     # 框架心跳检测 (0-Token 毫秒级)
+      - "check"    # 环境依赖与门禁体检
+      - "heal"     # 一键静默自愈装配
+      - "config"   # 查看生效配置看板
+      - "set"      # 快捷修改配置
+      - "status"   # 极速系统与资源诊断
+      - "report"   # 立即生成并查看健康报告
+      - "demo"     # 示例代码展示
+      - "recruit"  # 招募数字化员工
+      - "help"     # 快速指令说明
+
+  schedule:
+    enabled: true
+    default_interval: 3600
+    report_output: "workspace/outputs/sentinel_report.md"
+
+  event_driven:
+    enabled: true
+    supported_events:
+      - "file_changed"
+      - "alert_triggered"
+      - "license_expired"
+
+  dialogue:
+    enabled: true
+    gateway_required: false # 无Key可优雅回退教学

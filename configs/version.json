@@ -1,0 +1,15 @@
+{
+  "latest_version": "2.5.0",
+  "min_compatible_version": "2.4.0",
+  "title": "立体空间智能体系统 v2.5.0",
+  "release_notes": [
+    "全面重构系统设置面板为 Clash Verge 风格双列卡片瀑布流",
+    "升级原生硬件指纹 0ms 读取与 Pinia 状态树响应式穿透",
+    "全维哨兵 [EXEC] 快速直达指令优美结构化 Markdown 排版",
+    "打通多会话存储池，支持新建会话与历史话题快速切换",
+    "引入商业级 Zero-Config 嵌入式 Python 3.10 运行时与自动打包"
+  ],
+  "patch_type": "hotfix",
+  "download_url": "",
+  "file_size_kb": 128
+}
