@@ -35,13 +35,18 @@ CDN_AGENT_BACKUP_URL = "https://cdn.litikj.com/agent-os/capsules/agent_catalog.j
 
 def fetch_cdn_bytes(url: str, timeout: int = 10) -> Optional[bytes]:
     """健壮的云端 CDN 资源拉取封装：优先尝试系统原生 curl.exe（天然避免 Windows TLS 协商 EOF 异常），备选 urllib"""
-    if not url:
+    if not url or not isinstance(url, str):
         return None
 
-    # 1. 优先尝试系统原生 curl.exe
+    clean_url = url.strip()
+    # 🛡️ 安全门禁 (R3-VULN-07): 防御 curl 参数注入 (禁止首字符为 -) 且限定协议白名单 (仅限 https:// 与 http://)
+    if clean_url.startswith("-") or not clean_url.startswith(("https://", "http://")):
+        return None
+
+    # 1. 优先尝试系统原生 curl.exe (使用 -- 明确终止命令行选项解析)
     try:
         proc = subprocess.run(
-            ["curl.exe", "-s", "--max-time", str(timeout), url, "-H", "User-Agent: Litikj-Agent-OS/2.5.0"],
+            ["curl.exe", "-s", "--max-time", str(timeout), "-H", "User-Agent: Litikj-Agent-OS/2.5.0", "--", clean_url],
             capture_output=True,
             timeout=timeout + 2
         )
@@ -52,7 +57,7 @@ def fetch_cdn_bytes(url: str, timeout: int = 10) -> Optional[bytes]:
 
     # 2. 备用 urllib.request
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Litikj-Agent-OS/2.5.0"})
+        req = urllib.request.Request(clean_url, headers={"User-Agent": "Litikj-Agent-OS/2.5.0"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             if resp.status == 200:
                 return resp.read()

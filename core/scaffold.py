@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from .config import ConfigManager
+from .security import validate_safe_id
 
 if sys.platform.startswith("win"):
     try:
@@ -139,9 +140,13 @@ def create_agent_scaffold(name: str, description: str = "", is_custom: bool = Tr
     :param agent_type: 智能体类型 "media" (自媒体/内容生产类) 或 "general" (通用任务类)
     :param with_tests: 是否同步生成配套自动化测试文件
     """
+    clean_name = validate_safe_id(name, "智能体标识")
     cm = ConfigManager.get_instance()
     base_dir = (cm.workspace_dir / "custom_agents") if is_custom else cm.agents_dir
-    target_dir = base_dir / name
+    target_dir = (base_dir / clean_name).resolve()
+
+    if not target_dir.is_relative_to(base_dir.resolve()):
+        raise PermissionError(f"安全拦截：非法路径穿越标识 [{name}]")
 
     if target_dir.exists():
         raise FileExistsError(f"目标智能体目录已存在: {target_dir}")
@@ -150,16 +155,18 @@ def create_agent_scaffold(name: str, description: str = "", is_custom: bool = Tr
     (target_dir / "persona").mkdir(exist_ok=True)
     (target_dir / "tools").mkdir(exist_ok=True)
 
-    desc = description or f"{name} 工业化业务智能体"
-    class_name = "".join(part.capitalize() for part in name.split("_")) + "Agent"
+    desc = description or f"{clean_name} 工业化业务智能体"
+    safe_desc_literal = repr(desc)
+    safe_yaml_desc = desc.replace('\\', '\\\\').replace('"', '\\"').replace('\n', ' ')
+    class_name = "".join(part.capitalize() for part in clean_name.split("_")) + "Agent"
 
     # 1. config.yaml
-    config_content = f"""name: "{name}"
-display_name: "{name.title().replace('_', ' ')} 智能体"
+    config_content = f"""name: "{clean_name}"
+display_name: "{clean_name.title().replace('_', ' ')} 智能体"
 version: "1.0.0"
 icon: "{'🎬' if agent_type == 'media' else '🤖'}"
 category: "{'自媒体矩阵' if agent_type == 'media' else '业务拓展'}"
-description: "{desc}"
+description: "{safe_yaml_desc}"
 author: "Litikj Developer"
 
 quick_chips:
@@ -186,9 +193,9 @@ actions:
     (target_dir / "config.yaml").write_text(config_content, encoding="utf-8")
 
     # 2. persona/prompt.md
-    prompt_content = f"""# 【{name}】人设与行为准则
+    prompt_content = f"""# 【{clean_name}】人设与行为准则
 
-你是一个名为【{name}】的专业工业级智能体。
+你是一个名为【{clean_name}】的专业工业级智能体。
 你的职责是：{desc}。
 
 ## 行为规范：
@@ -256,17 +263,18 @@ from core.llm import LLMClient
 
 
 class {class_name}(StandardAgent):
-    \"\"\"{desc}\"\"\"
+    \"\"\"{clean_name} 智能体业务实现\"\"\"
+    DEFAULT_DESCRIPTION = {safe_desc_literal}
 
     # 【三大首要铁律：环境自检与静默自愈声明】
     # 出厂底座保持绝对纯净，按需在此声明专属目录与依赖
-    DROP_BOX_DIRS: List[str] = ["drop_box/{name}"]
+    DROP_BOX_DIRS: List[str] = ["drop_box/{clean_name}"]
     REQUIRED_PACKAGES: List[str] = []
     REQUIRED_BINARIES: List[str] = [{'["ffmpeg"]' if agent_type == 'media' else '[]'}]
 
     # 标准配置面板 JSON Schema 定义 (对齐 AgentSettingsModal.vue)
     CONFIG_SCHEMA = {{
-        "title": "{name} 预置业务配置",
+        "title": "{clean_name} 预置业务配置",
         "type": "object",
         "properties": {{
             "target_account": {{
@@ -309,13 +317,13 @@ class {class_name}(StandardAgent):
 
     def __init__(self):
         super().__init__(
-            name="{name}",
-            description="{desc}"
+            name={repr(clean_name)},
+            description=self.DEFAULT_DESCRIPTION
         )
         self.base_dir = Path(__file__).resolve().parent
         
         # 挂载基础授权门禁
-        self.add_pre_guard(LicenseGuard(name="{name} 授权审计门禁", strict=False))
+        self.add_pre_guard(LicenseGuard(name="{clean_name} 授权审计门禁", strict=False))
 
         # 读取人设提示词
         prompt_file = self.base_dir / "persona" / "prompt.md"
@@ -398,9 +406,9 @@ def setup(registry: Registry):
     (target_dir / "entry.py").write_text(entry_content, encoding="utf-8")
 
     # 5. README.md
-    readme_content = f"""# 🤖 {name} 智能体工程说明书
+    readme_content = f"""# 🤖 {clean_name} 智能体工程说明书
 
-- **中文名称**：{name.title().replace('_', ' ')}
+- **中文名称**：{clean_name.title().replace('_', ' ')}
 - **类型**：{'自媒体矩阵类' if agent_type == 'media' else '通用业务类'}
 - **简介**：{desc}
 
@@ -413,14 +421,15 @@ def setup(registry: Registry):
 """
     (target_dir / "README.md").write_text(readme_content, encoding="utf-8")
 
-    # 6. 配套单元测试生成 tests/test_{name}.py
+    # 6. 配套单元测试生成 tests/test_{clean_name}.py
     if with_tests:
+        test_file = cm.root_dir / "tests" / f"test_{clean_name}.py"
         if not is_custom:
-            import_code = f"from agents.{name}.entry import {class_name}"
+            import_code = f"from agents.{clean_name}.entry import {class_name}"
         else:
             import_code = f"""import importlib.util
-_entry_p = Path(__file__).resolve().parents[1] / "custom_agents" / "{name}" / "entry.py"
-_spec = importlib.util.spec_from_file_location("custom_agents.{name}.entry", _entry_p)
+_entry_p = Path(__file__).resolve().parents[1] / "custom_agents" / "{clean_name}" / "entry.py"
+_spec = importlib.util.spec_from_file_location("custom_agents.{clean_name}.entry", _entry_p)
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 {class_name} = getattr(_mod, "{class_name}")"""
@@ -428,8 +437,8 @@ _spec.loader.exec_module(_mod)
         if not test_file.exists():
             test_content = f"""# -*- coding: utf-8 -*-
 \"\"\"
-tests/test_{name}.py
-【{name} 智能体工业化自动化契约测试套件】
+tests/test_{clean_name}.py
+【{clean_name} 智能体工业化自动化契约测试套件】
 覆盖：
 1. Schema 契约与配置持久化测试；
 2. 0-Token Fast-Path 指令回路测试；
@@ -444,14 +453,14 @@ from core.scaffold import check_agent_sop_compliance
 {import_code}
 
 
-def test_{name}_sop_compliance():
+def test_{clean_name}_sop_compliance():
     \"\"\"测试智能体是否完全符合工业级 SOP 规约 (零顶层第三方依赖)\"\"\"
-    agent_dir = Path(__file__).resolve().parents[1] / "{'custom_agents' if is_custom else 'agents'}" / "{name}"
+    agent_dir = Path(__file__).resolve().parents[1] / "{'custom_agents' if is_custom else 'agents'}" / "{clean_name}"
     errors = check_agent_sop_compliance(agent_dir)
     assert errors == [], f"SOP 规约校验未通过: {{errors}}"
 
 
-def test_{name}_config_schema_contract():
+def test_{clean_name}_config_schema_contract():
     \"\"\"测试通用设置面板 JSON Schema 契约与配置持久化\"\"\"
     agent = {class_name}()
     schema = agent.get_config_schema()
@@ -472,7 +481,7 @@ def test_{name}_config_schema_contract():
     agent.update_config({{"target_account": "default", "auto_notify": True}})
 
 
-def test_{name}_fast_path_routing():
+def test_{clean_name}_fast_path_routing():
     \"\"\"测试 0-Token Fast-Path 快速直达指令\"\"\"
     agent = {class_name}()
 
@@ -496,7 +505,7 @@ def test_{name}_fast_path_routing():
     assert "快速指令清单" in res_help
 
 
-def test_{name}_self_healing_and_check():
+def test_{clean_name}_self_healing_and_check():
     \"\"\"测试智能体环境自检与静默自愈能力 (SOP 铁律二与铁律三)\"\"\"
     agent = {class_name}()
     readiness = agent.get_readiness_status()
@@ -513,12 +522,12 @@ def test_{name}_self_healing_and_check():
     assert res_heal is not None
 
 
-def test_{name}_run_pipeline():
+def test_{clean_name}_run_pipeline():
     \"\"\"测试多工序流水线调度\"\"\"
     agent = {class_name}()
     ctx = TaskContext(
         task_id="test_run_01",
-        agent_name="{name}",
+        agent_name="{clean_name}",
         payload={{"topic": "工业化系统开发", "text": "本期实操深入拆解核心系统架构与代码落地实践。"}}
     )
     result = agent.run(ctx)
@@ -535,20 +544,27 @@ def test_{name}_run_pipeline():
 
 def create_workflow_scaffold(name: str, description: str = "") -> Path:
     """生成标准化 Workflow 协作流水线脚本"""
+    from .security import validate_safe_id
+    clean_name = validate_safe_id(name, "工作流标识")
     cm = ConfigManager.get_instance()
-    workflows_dir = cm.workflows_dir
+    workflows_dir = cm.workflows_dir.resolve()
     workflows_dir.mkdir(parents=True, exist_ok=True)
-    target_file = workflows_dir / f"{name}.py"
+    target_file = (workflows_dir / f"{clean_name}.py").resolve()
+
+    if not target_file.is_relative_to(workflows_dir):
+        raise PermissionError(f"安全拦截：非法路径穿越标识 [{name}]")
 
     if target_file.exists():
         raise FileExistsError(f"目标流水线脚本已存在: {target_file}")
 
-    desc = description or f"{name} 多智能体接力流水线"
+    raw_desc = description or f"{clean_name} 多智能体接力流水线"
+    safe_desc_literal = repr(raw_desc)
+    safe_comment_desc = raw_desc.replace("\r", " ").replace("\n", " ").replace('"""', "'''")
 
     wf_content = f"""# -*- coding: utf-8 -*-
 \"\"\"
-workflows/{name}.py
-【{desc}】
+workflows/{clean_name}.py
+【{safe_comment_desc}】
 \"\"\"
 
 from typing import Dict, Any
@@ -556,10 +572,10 @@ from core.workflow import Workflow
 from core.registry import Registry
 
 
-def create_{name}_workflow() -> Workflow:
+def create_{clean_name}_workflow() -> Workflow:
     flow = Workflow(
-        name="{name}",
-        description="{desc}"
+        name={repr(clean_name)},
+        description={safe_desc_literal}
     )
 
     flow.add_step(
@@ -573,7 +589,7 @@ def create_{name}_workflow() -> Workflow:
 
 def setup(registry: Registry):
     \"\"\"注册中心自动挂载入口\"\"\"
-    workflow = create_{name}_workflow()
+    workflow = create_{clean_name}_workflow()
     registry.register_workflow(workflow)
 """
     target_file.write_text(wf_content, encoding="utf-8")

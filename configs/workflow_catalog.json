@@ -16,7 +16,7 @@
     },
     "size": "1 KB",
     "size_kb": 1,
-    "sha256": "6a7cb5a9b99996b1c695448af56cba1817cc916c460ee3c753d857607025d5ff",
+    "sha256": "9694e06f9e87ba71c3f02efcaf9b57003deb1610335db7344768e75a8293c0b9",
     "required_role": "guest",
     "role_name": "系统官方内置",
     "badge_color": "emerald",

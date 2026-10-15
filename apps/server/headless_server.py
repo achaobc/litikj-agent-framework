@@ -72,7 +72,13 @@ def main():
             if sys.platform.startswith("win"):
                 try:
                     import subprocess
-                    ps_script = f"Get-NetTCPConnection -LocalPort {int(args.port)} -State Listen -ErrorAction SilentlyContinue | Where-Object {{ $_.OwningProcess -gt 0 -and $_.OwningProcess -ne $PID }} | ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
+                    ps_script = (
+                        f"Get-NetTCPConnection -LocalPort {int(args.port)} -State Listen -ErrorAction SilentlyContinue | "
+                        f"Where-Object {{ $_.OwningProcess -gt 0 -and $_.OwningProcess -ne $PID }} | "
+                        f"ForEach-Object {{ $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; "
+                        f"if ($p -and ($p.ProcessName -like '*python*' -or $p.Path -like '*python*')) {{ "
+                        f"Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }} }}"
+                    )
                     subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script], timeout=5)
                     time.sleep(1)
                     # 重新启动 (补全 token 参数 SEC-01)

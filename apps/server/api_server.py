@@ -436,7 +436,20 @@ class KernelApiRequestHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        content_length = int(self.headers.get("Content-Length", 0))
+        # 🛡️ 拒绝服务攻击防护 (R3-VULN-05): 限制 HTTP 请求体最大 32MB
+        MAX_BODY_SIZE = 32 * 1024 * 1024
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+        except (ValueError, TypeError):
+            content_length = 0
+
+        if content_length < 0 or content_length > MAX_BODY_SIZE:
+            self.send_response(413)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b'{"success": false, "error": "Payload Too Large: \xe8\xaf\xb7\xe6\xb1\x82\xe4\xbd\x93\xe5\xa4\xa7\xe5\xb0\x8f\xe8\xb6\x85\xe8\xbf\x87 32MB \xe5\xae\x89\xe5\x85\xa8\xe4\xb8\x8a\xe9\x99\x90"}')
+            return
+
         post_data = self.rfile.read(content_length) if content_length > 0 else b"{}"
 
         try:
@@ -926,6 +939,11 @@ class KernelApiRequestHandler(SimpleHTTPRequestHandler):
             if not inspection.get("valid"):
                 self._send_json({"success": False, "status": "error", "error": inspection.get("error", "无效的技能卡带")}, status=400)
                 return
+            # 🛡️ 内存防爆 (R3-VULN-05): 限制临时卡带缓存池最大容量 (最多保留 10 份，淘汰最旧的条目)
+            while len(self._temp_capsules) >= 10:
+                oldest_k = next(iter(self._temp_capsules))
+                self._temp_capsules.pop(oldest_k, None)
+
             token = os.urandom(8).hex()
             self._temp_capsules[token] = raw_bytes
             inspection["temp_token"] = token

@@ -211,8 +211,13 @@ class Workflow:
         return d
 
     def _save_snapshot(self, workflow_id: str, snapshot: Dict[str, Any]):
-        p = self._get_state_dir() / f"{workflow_id}.json"
+        from .security import validate_safe_id
         try:
+            clean_id = validate_safe_id(workflow_id, "工作流实例ID")
+            state_dir = self._get_state_dir().resolve()
+            p = (state_dir / f"{clean_id}.json").resolve()
+            if not p.is_relative_to(state_dir):
+                raise PermissionError(f"安全拦截：非法路径遍历 [{workflow_id}]")
             with open(p, "w", encoding="utf-8") as f:
                 json.dump(snapshot, f, ensure_ascii=False, indent=2)
         except Exception as e:
@@ -220,10 +225,15 @@ class Workflow:
 
     @classmethod
     def load_snapshot(cls, workflow_id: str) -> Optional[Dict[str, Any]]:
-        p = cls._get_state_dir() / f"{workflow_id}.json"
-        if not p.exists():
-            return None
+        from .security import validate_safe_id
         try:
+            clean_id = validate_safe_id(workflow_id, "工作流实例ID")
+            state_dir = cls._get_state_dir().resolve()
+            p = (state_dir / f"{clean_id}.json").resolve()
+            if not p.is_relative_to(state_dir):
+                return None
+            if not p.exists():
+                return None
             with open(p, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:

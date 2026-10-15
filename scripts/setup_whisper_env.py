@@ -25,7 +25,12 @@ if sys.platform.startswith("win"):
     except Exception:
         pass
 
+import hashlib
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
+from core.preflight import OFFICIAL_GET_PIP_SHA256_WHITELIST
 RUNTIME_PYTHON = PROJECT_ROOT / "runtime" / "python.exe"
 SITE_PACKAGES = PROJECT_ROOT / "runtime" / "site-packages"
 CACHE_DIR = PROJECT_ROOT / "workspace" / "cache"
@@ -81,6 +86,15 @@ def ensure_pip() -> bool:
 
     if not downloaded:
         log("❌ 无法下载 get-pip.py，请检查您的网络连接。")
+        return False
+
+    # 🛡️ 安全门禁：校验 get-pip.py 官方 SHA-256 指纹白名单 (SEC-10 / R3-VULN-02)
+    raw_get_pip = get_pip_path.read_bytes()
+    file_sha = hashlib.sha256(raw_get_pip).hexdigest().lower()
+    allow_unverified = os.environ.get("LITIKJ_ALLOW_CUSTOM_GET_PIP") == "1"
+    if file_sha not in OFFICIAL_GET_PIP_SHA256_WHITELIST and not allow_unverified:
+        get_pip_path.unlink(missing_ok=True)
+        log(f"❌ 安全拦截：get-pip.py 未通过 PyPA 官方指纹校验 ({file_sha})，已拒绝执行以防御宿主提权 (SEC-10)！")
         return False
 
     log("⚙️ 正在执行便携环境 pip 注入...")

@@ -147,7 +147,7 @@ class Registry:
         try:
             skill_dir_str = str(skill_dir.resolve())
             if skill_dir_str not in sys.path:
-                sys.path.insert(0, skill_dir_str)
+                sys.path.append(skill_dir_str)
 
             # 读取元数据
             cfg_data = {}
@@ -243,7 +243,7 @@ class Registry:
 
         target_dir_str = str(target_dir.resolve())
         if target_dir_str not in sys.path:
-            sys.path.insert(0, target_dir_str)
+            sys.path.append(target_dir_str)
 
         for sub in target_dir.iterdir():
             if sub.is_dir() and not sub.name.startswith((".", "_")):
@@ -255,7 +255,7 @@ class Registry:
                     try:
                         sub_str = str(sub.resolve())
                         if sub_str not in sys.path:
-                            sys.path.insert(0, sub_str)
+                            sys.path.append(sub_str)
 
                         package_prefix = "custom_agents" if is_external else ("agents" if is_agent else "skills")
                         module_name = f"{package_prefix}.{sub.name}.{candidate.stem}"
