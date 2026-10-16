@@ -4,7 +4,7 @@
     "name": "系统全维健康审计流水线",
     "display_name": "系统全维健康审计流水线",
     "version": "1.0.0",
-    "author": "Litikj Open Source Team",
+    "author": "阿朝编程 / 立体空间官方",
     "category": "系统基准",
     "icon": "🛡️",
     "description": "立体空间标杆基准协同流水线：全维哨兵硬件巡检 ➔ 人机审批把关 ➔ 持久化审计归档",
@@ -14,13 +14,13 @@
       ],
       "skills": []
     },
-    "size": "1 KB",
-    "size_kb": 1,
-    "sha256": "9576c4298f70b953b4e17c47ecf9fe0a82cb3b7e788307af45cf85a917725375",
+    "size": "2 KB",
+    "size_kb": 2,
+    "sha256": "5e8481e9ecb4e1cad9af365d64bd9c2b874a6d2fe98aa0886b49e04adce8c104",
     "required_role": "guest",
     "role_name": "系统官方内置",
     "badge_color": "emerald",
     "capsule_filename": "system_health_audit_v1.0.0.flow",
-    "download_url": ""
+    "download_url": "https://cdn.litikj.com/capsules/system_health_audit_v1.0.0.flow"
   }
 ]

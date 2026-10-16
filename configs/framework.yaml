@@ -7,7 +7,7 @@
 
 system:
   name: "立体空间智能体系统 (Litikj Agent Framework)"
-  version: "2.5.0"
+  version: "2.5.1"
   workspace_dir: "workspace"
   agents_dir: "agents"
   skills_dir: "skills"

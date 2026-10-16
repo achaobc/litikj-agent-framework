@@ -26,7 +26,28 @@ if sys.platform.startswith("win"):
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 RELEASE_DIR = ROOT_DIR / "release"
-VERSION = "v2.5.0"
+
+
+def load_version() -> str:
+    env_v = os.environ.get("RELEASE_VERSION")
+    if env_v:
+        env_v = env_v.strip()
+        return env_v if env_v.startswith("v") else f"v{env_v}"
+
+    yaml_path = ROOT_DIR / "configs" / "framework.yaml"
+    if yaml_path.exists():
+        try:
+            import yaml
+            with open(yaml_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+                v = str(data.get("system", {}).get("version", "2.5.0")).strip()
+                return v if v.startswith("v") else f"v{v}"
+        except Exception:
+            pass
+    return "v2.5.0"
+
+
+VERSION = load_version()
 
 # 白名单目录与文件
 INCLUDE_DIRS = [

@@ -9,11 +9,25 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/achaobc/litikj-agent-framework/releases/latest"><img src="https://img.shields.io/github/v/release/achaobc/litikj-agent-framework?color=blue&label=Latest%20Release" alt="Latest Release"></a>
   <a href="#-核心四大特性"><img src="https://img.shields.io/badge/Microkernel-%3C40MB-emerald.svg" alt="Kernel Size"></a>
   <a href="#-离线自治-local-first"><img src="https://img.shields.io/badge/Local--First-100%25%20Offline-blue.svg" alt="Local First"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-orange.svg" alt="License"></a>
   <a href="#-测试与质量"><img src="https://img.shields.io/badge/Tests-100%25%20Passed-brightgreen.svg" alt="Tests"></a>
 </p>
+
+<!-- 🚀 开箱即用客户端下载 (针对非开发者用户) -->
+<div align="center">
+
+### ⚡ Windows 桌面端开箱即用下载 (无需配置 Python / 源码)
+
+| 官方安装包 (推荐普通用户) | 绿色免安装版 (推荐便携用户) |
+| :---: | :---: |
+| [![Download Setup](https://img.shields.io/badge/Windows%20安装向导-Setup.exe-brightgreen?style=for-the-badge&logo=windows)](https://github.com/achaobc/litikj-agent-framework/releases/latest) | [![Download Portable](https://img.shields.io/badge/Windows%20绿色免安装-Portable.zip-blue?style=for-the-badge&logo=windows)](https://github.com/achaobc/litikj-agent-framework/releases/latest) |
+
+👉 **不想看代码？[点此直接跳转至最新发布页下载 (Releases)](https://github.com/achaobc/litikj-agent-framework/releases/latest)**
+
+</div>
 
 ---
 

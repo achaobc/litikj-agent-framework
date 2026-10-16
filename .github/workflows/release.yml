@@ -1,0 +1,67 @@
+name: Release Litikj Agent Framework
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release
+    runs-on: windows-latest
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 配置 Python 环境 (3.10)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 安装 Python 基础依赖与测试工具
+        run: |
+          pip install --upgrade pip
+          pip install pytest pyyaml psutil pillow
+
+      - name: 执行自动化质量回归 (pytest)
+        run: |
+          pytest tests/ -v
+
+      - name: 准备嵌入式 Python 运行时
+        run: |
+          python scripts/prepare_runtime.py
+
+      - name: 配置 Node.js 环境 (18)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: 'desktop/package-lock.json'
+
+      - name: 编译前端与构建 Tauri 原生桌面端
+        run: |
+          cd desktop
+          npm ci
+          npm run build
+          cargo install tauri-cli --version ^2.0.0 --locked
+          cargo tauri build
+          cd ..
+
+      - name: 执行出厂纯净态打包归档
+        run: |
+          python scripts/package_release.py
+
+      - name: 挂载发布至 GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            release/*_Setup.exe
+            release/*_Portable.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

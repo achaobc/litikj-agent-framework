@@ -3,19 +3,19 @@
     "id": "omni_sentinel",
     "name": "全维调度哨兵 (Omni Sentinel)",
     "display_name": "全维调度哨兵 (Omni Sentinel)",
-    "version": "1.0.0",
-    "author": "Litikj Open Source Team",
+    "version": "1.1.0",
+    "author": "阿朝编程 / 立体空间官方",
     "category": "系统基准",
     "icon": "🛡️",
-    "description": "立体空间标杆智能体：演示对话启动、0-Token直达、定时打卡与事件驱动四维调度",
+    "description": "立体空间标杆智能体：继承 StandardAgent 标准基类，演示通用配置面板、0-Token直达、环境自检自愈、定时打卡与事件驱动全维调度",
     "skills": [],
-    "size": "16 KB",
-    "size_kb": 16,
-    "sha256": "358cc36f65f995422a48179c59e02883908ad548c2dde97f54edd07a08e59cc6",
+    "size": "17 KB",
+    "size_kb": 17,
+    "sha256": "10b10bbc6042637ad5ed4db4341c147c4920616f57f33e178d527b223aed40b6",
     "required_role": "guest",
     "role_name": "系统官方内置",
     "badge_color": "emerald",
-    "capsule_filename": "omni_sentinel_v1.0.0.agent",
-    "download_url": ""
+    "capsule_filename": "omni_sentinel_v1.1.0.agent",
+    "download_url": "https://cdn.litikj.com/capsules/omni_sentinel_v1.1.0.agent"
   }
 ]
