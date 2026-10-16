@@ -476,16 +476,25 @@ class PreflightChecker:
     @classmethod
     def check_binary(cls, binary_name: str) -> bool:
         """检查系统 PATH 或内置 bin 目录下是否存在可执行文件"""
-        if shutil.which(binary_name):
-            return True
+        return cls.resolve_binary(binary_name) is not None
+
+    @classmethod
+    def resolve_binary(cls, binary_name: str) -> Optional[str]:
+        """解析系统 PATH 或内置 bin 目录下的可执行文件完整路径"""
+        found = shutil.which(binary_name)
+        if found:
+            return found
         cm = ConfigManager.get_instance()
-        # 兼容便携版 bin/ 目录
         possible_paths = [
             cm.root_dir / "bin" / f"{binary_name}.exe",
             cm.root_dir / "bin" / binary_name,
             cm.root_dir / "runtime" / f"{binary_name}.exe",
+            cm.workspace_dir / "tools" / f"{binary_name}.exe",
         ]
-        return any(p.exists() for p in possible_paths)
+        for p in possible_paths:
+            if p.exists():
+                return str(p.resolve())
+        return None
 
     @classmethod
     def check_python_module(cls, module_name: str) -> bool:
