@@ -298,7 +298,19 @@ class ToolRunner:
                 return "hello_skill", {"name": name, "topic": topic or "开源实战"}
 
 
-        # 2. 调度已注册的扩展技能意图识别钩子 (微内核插件式解耦设计)
+        # 2. 动态自反射识别：向当前智能体装备且已在 Registry 注册的技能询问意图契约
+        try:
+            reg = Registry.get_instance()
+            for s_id in skills_list:
+                skill = reg.get_skill(s_id)
+                if skill and hasattr(skill, "detect_intent"):
+                    res = skill.detect_intent(msg)
+                    if res and isinstance(res, dict):
+                        return s_id, res
+        except Exception:
+            pass
+
+        # 3. 调度已注册的扩展技能意图识别钩子 (微内核插件式解耦设计)
         for handler in cls._custom_intent_handlers:
             try:
                 res = handler(msg, skills_list)

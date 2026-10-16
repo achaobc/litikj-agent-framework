@@ -234,6 +234,10 @@ class BaseSkill(ABC):
         """执行原子技能并返回产出数据字典"""
         pass
 
+    def detect_intent(self, user_msg: str) -> Optional[Dict[str, Any]]:
+        """可选的离线 0-Token 意图识别能力（默认返回 None，技能子类可按需实现）"""
+        return None
+
     def to_dict(self) -> Dict[str, Any]:
         """序列化为前端可读的技能卡片元数据"""
         return {
