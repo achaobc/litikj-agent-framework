@@ -26,3 +26,8 @@ python run.py run <agent> [payload]       # Dispatch batch task
 python run.py chat [agent]                # Start interactive dialogue
 pytest tests/ -v                          # Run comprehensive test suite
 ```
+
+## AI Assistant Triggers (docs/DEVELOPER_SOP.md)
+- `【研发】: <需求>`: Automatically analyzes, creates feature branch, writes code following Iron Laws, and runs unit tests.
+- `【交付】`: Runs full `pytest tests/ -v` gate, commits with Conventional Commits, merges to main, pushes to GitHub, and outputs Handover Card.
+
