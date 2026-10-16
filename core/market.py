@@ -217,9 +217,7 @@ def parse_jwt_role(token: str) -> Tuple[str, str]:
     if len(parts) == 2:
         return ("guest", "激活码格式异常：缺失数字签名 (防伪拦截 SEC-05)")
 
-    if is_dev_env:
-        return ("annual", "年度会员")
-
+    # 缺少有效数字签名或无法解析的凭据一律收紧为访客身份 (Fail-Closed SEC-05)
     return ("guest", "未激活 (访客)")
 
 

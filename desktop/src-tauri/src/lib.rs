@@ -299,9 +299,9 @@ pub fn run() {
 
             #[cfg(windows)]
             {
-                // 启动前先清理可能存在的孤儿僵尸 Python 进程，杜绝端口冲突与旧进程代码缓存 (SEC-VULN-09: 严格限定仅清理 python 进程)
+                // 启动前安全清理可能残留的 headless_server 孤儿僵尸进程，通过 CommandLine 精准识别，杜绝误杀用户本地其他 Python 服务
                 let _ = Command::new("powershell")
-                    .args(["-NoProfile", "-Command", "Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 0 } | ForEach-Object { $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; if ($p -and ($p.ProcessName -like '*python*' -or $p.Path -like '*python*')) { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } }"])
+                    .args(["-NoProfile", "-Command", "Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 0 } | ForEach-Object { $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; if ($p -and ($p.ProcessName -like '*python*' -or $p.Path -like '*python*')) { $cmd = (Get-CimInstance Win32_Process -Filter \"ProcessId = $($p.Id)\" -ErrorAction SilentlyContinue).CommandLine; if ($cmd -like '*headless_server*' -or $cmd -like '*apps*server*') { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } }"])
                     .creation_flags(CREATE_NO_WINDOW)
                     .status();
             }
@@ -359,6 +359,20 @@ pub fn run() {
                     println!("🚀 [Tauri] Python AI 微内核已作为 Sidecar 伴生拉起 (PID: {})", child.id());
                     let mut lock = sidecar_child_clone.lock().unwrap();
                     *lock = Some(child);
+
+                    // 🛡️ 消除冷启动竞态：轮询探测 127.0.0.1:8765 TCP 就绪 (最多等待 6 秒)
+                    let mut server_ready = false;
+                    for _ in 0..30 {
+                        if std::net::TcpStream::connect("127.0.0.1:8765").is_ok() {
+                            server_ready = true;
+                            println!("✨ [Tauri] Python AI 微内核端口 8765 已就绪！");
+                            break;
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(200));
+                    }
+                    if !server_ready {
+                        println!("⚠️ [Tauri] Python 伴生引擎端口探测超时，前端可能需要重试握手");
+                    }
                 }
                 Err(err) => {
                     eprintln!("⚠️ [Tauri] 拉起 Python 伴生引擎提示: {}", err);

@@ -22,6 +22,7 @@ python run.py diagnose                    # Health check and environment audit
 python run.py list                        # List active agents, skills, workflows
 python run.py new agent <agent_name>      # Scaffold compliant agent
 python run.py new workflow <flow_name>    # Scaffold compliant workflow
+python run.py new skill <skill_name>      # Scaffold compliant atomic skill (docs/AI_SKILL_DEVELOPER_SPEC.md)
 python run.py run <agent> [payload]       # Dispatch batch task
 python run.py chat [agent]                # Start interactive dialogue
 pytest tests/ -v                          # Run comprehensive test suite

@@ -597,6 +597,189 @@ def setup(registry: Registry):
     return target_file
 
 
+def create_skill_scaffold(
+    name: str,
+    description: str = "",
+    category: str = "通用工具",
+    is_custom: bool = True
+) -> Path:
+    """
+    一键生成工业级标准化 Skill 技能胶囊工程
+    包含: manifest.yaml (规范元数据 + status + schema), entry.py (零顶层依赖 BaseSkill),
+          prompt.md, README.md, tests/test_local.py (独立自动化单测)
+    """
+    clean_name = validate_safe_id(name, "技能标识")
+    cm = ConfigManager.get_instance()
+    base_dir = (cm.root_dir / "skills" / "custom") if is_custom else (cm.root_dir / "skills" / "official")
+    target_dir = (base_dir / clean_name).resolve()
+
+    if not target_dir.is_relative_to(base_dir.resolve()):
+        raise PermissionError(f"安全拦截：非法路径穿越标识 [{name}]")
+
+    if target_dir.exists():
+        raise FileExistsError(f"目标技能目录已存在: {target_dir}")
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+    (target_dir / "tests").mkdir(exist_ok=True)
+
+    desc = description or f"{clean_name} 自动化原子技能"
+    safe_yaml_desc = desc.replace('\\', '\\\\').replace('"', '\\"').replace('\n', ' ')
+    origin_str = "custom" if is_custom else "official"
+    clean_desc_str = desc.replace('"', '')
+
+    # 1. 生成 manifest.yaml
+    manifest_content = f"""# ========================================================
+# 🧩 【{clean_name}】工业级技能元数据清单
+# ========================================================
+id: "{clean_name}"
+name: "{clean_name}"
+display_name: "{clean_name}"
+version: "1.0.0"
+author: "本地开发者"
+icon: "🧩"
+category: "{category}"
+status: "stable"
+origin: "{origin_str}"
+description: "{safe_yaml_desc}"
+tags: ["{category}", "{clean_name}"]
+
+inputs:
+  - name: "topic"
+    type: "string"
+    required: true
+    desc: "任务主题或处理目标"
+  - name: "extra_params"
+    type: "dict"
+    required: false
+    desc: "可选扩展参数字典"
+
+outputs:
+  - name: "result"
+    type: "string"
+    desc: "技能执行结果或交付文本"
+  - name: "status"
+    type: "string"
+    desc: "执行状态码"
+"""
+    (target_dir / "manifest.yaml").write_text(manifest_content, encoding="utf-8")
+
+    # 2. 生成 entry.py (严格遵守零顶层依赖 SOP)
+    class_name = "".join(part.capitalize() for part in clean_name.split("_")) + "Skill"
+    entry_content = f"""# -*- coding: utf-8 -*-
+\"\"\"
+skills/{origin_str}/{clean_name}/entry.py
+【{clean_name} · 工业级标准化原子技能】
+\"\"\"
+
+import os
+import sys
+from pathlib import Path
+from typing import Dict, Any
+
+from core.contract import BaseSkill
+from core.registry import Registry
+
+
+class {class_name}(BaseSkill):
+    __test__ = False  # 防止以 Test 开头的技能类被 pytest 误收集为测试套件
+
+    def __init__(self):
+        super().__init__(
+            name="{clean_name}",
+            display_name="{clean_name}",
+            description="{clean_desc_str}",
+            version="1.0.0",
+            author="本地开发者",
+            icon="🧩",
+            category="{category}",
+            origin="{origin_str}"
+        )
+
+    def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        \"\"\"
+        技能核心执行契约接口 (零顶层依赖: 重量级第三方库必须在此方法内懒加载)
+        \"\"\"
+        topic = str(inputs.get("topic") or "默认任务").strip()
+        extra_params = inputs.get("extra_params") or {{}}
+
+        # 执行业务逻辑
+        output_msg = f"[{clean_name}] 已成功处理目标主题: {{topic}}"
+        
+        return {{
+            "result": output_msg,
+            "status": "success",
+            "topic": topic
+        }}
+
+
+def setup(registry: Registry):
+    \"\"\"微内核动态挂载入口点\"\"\"
+    skill_instance = {class_name}()
+    registry.register_skill(skill_instance)
+"""
+    (target_dir / "entry.py").write_text(entry_content, encoding="utf-8")
+
+    # 3. 生成 prompt.md
+    prompt_content = f"""# 【{clean_name}】技能提示词规约
+
+## 职责定位
+- 你是负责执行【{clean_name}】的专业技能执行器。
+- 业务分类: {category}
+- 核心功能: {desc}
+
+## 执行准则
+1. 严格按照 inputs 参数契约处理输入；
+2. 保持输出格式纯净规整，严禁幻觉输出。
+"""
+    (target_dir / "prompt.md").write_text(prompt_content, encoding="utf-8")
+
+    # 4. 生成 README.md
+    readme_content = f"""# {clean_name} 技能胶囊
+
+## 简介
+{desc}
+
+## 快速测试
+```bash
+pytest skills/{origin_str}/{clean_name}/tests/test_local.py -v
+```
+"""
+    (target_dir / "README.md").write_text(readme_content, encoding="utf-8")
+
+    # 5. 生成 tests/test_local.py (独立自动化单元测试)
+    test_content = f"""# -*- coding: utf-8 -*-
+\"\"\"
+tests/test_local.py
+【{clean_name} 技能胶囊独立本地自动化测试】
+\"\"\"
+
+import pytest
+from pathlib import Path
+from typing import Dict, Any
+
+from skills.{origin_str}.{clean_name}.entry import {class_name}
+
+
+def test_{clean_name}_execution_contract():
+    \"\"\"测试技能输入输出标准契约\"\"\"
+    skill = {class_name}()
+    assert skill.name == "{clean_name}"
+    
+    # 模拟输入参数
+    test_input = {{"topic": "工业级微内核实战测试"}}
+    result = skill.execute(test_input)
+    
+    assert isinstance(result, dict)
+    assert result.get("status") == "success"
+    assert "工业级微内核实战测试" in result.get("result", "")
+"""
+    (target_dir / "tests" / "test_local.py").write_text(test_content, encoding="utf-8")
+
+    print(f"✨ [Scaffold] 标准技能胶囊已成功生成: {target_dir}")
+    return target_dir
+
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="立体空间智能体工程脚手架与合规检查 CLI")
@@ -608,6 +791,13 @@ if __name__ == "__main__":
     p_agent.add_argument("--desc", default="", help="智能体简介")
     p_agent.add_argument("--builtin", action="store_true", help="是否创建到 agents/ 目录 (默认 custom_agents/)")
     p_agent.add_argument("--type", choices=["media", "general"], default="media", help="智能体业务类型")
+
+    # 创建技能
+    p_skill = subparsers.add_parser("skill", help="一键创建标准化 Skill 技能胶囊工程")
+    p_skill.add_argument("name", help="技能标识 (如: data_cleaner)")
+    p_skill.add_argument("--desc", default="", help="技能功能简介")
+    p_skill.add_argument("--category", default="通用工具", help="技能业务分类")
+    p_skill.add_argument("--builtin", action="store_true", help="是否创建到 skills/official/ (默认 skills/custom/)")
 
     # 检查智能体合规
     p_check = subparsers.add_parser("check", help="静态扫描智能体 SOP 合规性")
@@ -621,6 +811,13 @@ if __name__ == "__main__":
             description=args.desc,
             is_custom=not args.builtin,
             agent_type=args.type
+        )
+    elif args.cmd == "skill":
+        create_skill_scaffold(
+            name=args.name,
+            description=args.desc,
+            category=args.category,
+            is_custom=not args.builtin
         )
     elif args.cmd == "check":
         p = Path(args.target)

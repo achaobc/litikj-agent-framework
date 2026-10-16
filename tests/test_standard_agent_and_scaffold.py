@@ -149,3 +149,49 @@ def test_scaffold_creation(tmp_path):
     finally:
         if target_dir.exists():
             shutil.rmtree(target_dir, ignore_errors=True)
+
+
+def test_skill_scaffold_creation():
+    """测试原子技能脚手架与契约单测生成机制"""
+    from core.scaffold import create_skill_scaffold
+    from core.config import ConfigManager
+    import shutil
+
+    cm = ConfigManager.get_instance()
+    test_skill_name = "temp_auto_test_skill"
+    target_dir = cm.root_dir / "skills" / "custom" / test_skill_name
+
+    if target_dir.exists():
+        shutil.rmtree(target_dir, ignore_errors=True)
+
+    try:
+        created = create_skill_scaffold(
+            name=test_skill_name,
+            description="自动化测试专用技能",
+            category="测试工具",
+            is_custom=True
+        )
+        assert created.exists()
+        assert (created / "manifest.yaml").exists()
+        assert (created / "entry.py").exists()
+        assert (created / "prompt.md").exists()
+        assert (created / "README.md").exists()
+        assert (created / "tests" / "test_local.py").exists()
+
+        # 验证 manifest.yaml 包含规范状态与属性
+        manifest_text = (created / "manifest.yaml").read_text(encoding="utf-8")
+        assert 'status: "stable"' in manifest_text
+        assert 'category: "测试工具"' in manifest_text
+        assert f'id: "{test_skill_name}"' in manifest_text
+
+        # 验证生成的测试用例可被正常执行
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("test_local", created / "tests" / "test_local.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        assert hasattr(mod, f"test_{test_skill_name}_execution_contract")
+        getattr(mod, f"test_{test_skill_name}_execution_contract")()
+    finally:
+        if target_dir.exists():
+            shutil.rmtree(target_dir, ignore_errors=True)
+

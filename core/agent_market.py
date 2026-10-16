@@ -33,7 +33,7 @@ CDN_AGENT_CATALOG_URL = "https://cdn.litikj.com/capsules/agent_catalog.json"
 CDN_AGENT_BACKUP_URL = "https://cdn.litikj.com/agent-os/capsules/agent_catalog.json"
 
 
-def fetch_cdn_bytes(url: str, timeout: int = 10) -> Optional[bytes]:
+def fetch_cdn_bytes(url: str, timeout: int = 10, headers: Optional[Dict[str, str]] = None) -> Optional[bytes]:
     """健壮的云端 CDN 资源拉取封装：优先尝试系统原生 curl.exe（天然避免 Windows TLS 协商 EOF 异常），备选 urllib"""
     if not url or not isinstance(url, str):
         return None
@@ -43,10 +43,18 @@ def fetch_cdn_bytes(url: str, timeout: int = 10) -> Optional[bytes]:
     if clean_url.startswith("-") or not clean_url.startswith(("https://", "http://")):
         return None
 
+    req_headers = {"User-Agent": "Litikj-Agent-OS/2.5.0"}
+    if headers and isinstance(headers, dict):
+        req_headers.update(headers)
+
     # 1. 优先尝试系统原生 curl.exe (使用 -- 明确终止命令行选项解析)
     try:
+        curl_args = ["curl.exe", "-s", "--max-time", str(timeout)]
+        for k, v in req_headers.items():
+            curl_args.extend(["-H", f"{k}: {v}"])
+        curl_args.extend(["--", clean_url])
         proc = subprocess.run(
-            ["curl.exe", "-s", "--max-time", str(timeout), "-H", "User-Agent: Litikj-Agent-OS/2.5.0", "--", clean_url],
+            curl_args,
             capture_output=True,
             timeout=timeout + 2
         )
@@ -57,7 +65,7 @@ def fetch_cdn_bytes(url: str, timeout: int = 10) -> Optional[bytes]:
 
     # 2. 备用 urllib.request
     try:
-        req = urllib.request.Request(clean_url, headers={"User-Agent": "Litikj-Agent-OS/2.5.0"})
+        req = urllib.request.Request(clean_url, headers=req_headers)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             if resp.status == 200:
                 return resp.read()
@@ -244,7 +252,8 @@ class AgentMarketService:
                         pass
                 if not matched_local and target_info.get("download_url"):
                     try:
-                        downloaded = fetch_cdn_bytes(target_info["download_url"], timeout=20)
+                        auth_headers = {"Authorization": f"Bearer {cm.gateway.license_key}"} if cm.gateway.license_key else {}
+                        downloaded = fetch_cdn_bytes(target_info["download_url"], timeout=20, headers=auth_headers)
                         if downloaded:
                             capsule_bytes = downloaded
                     except Exception:
@@ -255,7 +264,8 @@ class AgentMarketService:
             # 优先从官方云端真实 CDN 下载
             download_url = target_info["download_url"]
             try:
-                downloaded = fetch_cdn_bytes(download_url, timeout=20)
+                auth_headers = {"Authorization": f"Bearer {cm.gateway.license_key}"} if cm.gateway.license_key else {}
+                downloaded = fetch_cdn_bytes(download_url, timeout=20, headers=auth_headers)
                 if downloaded:
                     capsule_bytes = downloaded
                     candidate_capsule.parent.mkdir(parents=True, exist_ok=True)

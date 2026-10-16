@@ -176,7 +176,8 @@ class WorkflowMarketService:
                 if not matched_local and target_info.get("download_url"):
                     try:
                         from .agent_market import fetch_cdn_bytes
-                        downloaded = fetch_cdn_bytes(target_info["download_url"], timeout=20)
+                        auth_headers = {"Authorization": f"Bearer {cm.gateway.license_key}"} if cm.gateway.license_key else {}
+                        downloaded = fetch_cdn_bytes(target_info["download_url"], timeout=20, headers=auth_headers)
                         if downloaded:
                             capsule_bytes = downloaded
                     except Exception:
@@ -188,7 +189,8 @@ class WorkflowMarketService:
             download_url = target_info["download_url"]
             try:
                 from .agent_market import fetch_cdn_bytes
-                downloaded = fetch_cdn_bytes(download_url, timeout=20)
+                auth_headers = {"Authorization": f"Bearer {cm.gateway.license_key}"} if cm.gateway.license_key else {}
+                downloaded = fetch_cdn_bytes(download_url, timeout=20, headers=auth_headers)
                 if downloaded:
                     capsule_bytes = downloaded
                     candidate_capsule.parent.mkdir(parents=True, exist_ok=True)

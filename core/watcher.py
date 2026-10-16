@@ -461,11 +461,11 @@ class WatcherEngine:
                         "subfolder": subfolder_name,
                         "status": "waiting_recruit",
                         "message": (
-                            f"📥 **【投递箱感知到新稿件】** 检测到 `drop_box/{subfolder_name or 'default'}` 投入了新视频：\n\n"
-                            f"📹 **文件**：`{file_path.name}` ({file_size_mb} MB)\n"
+                            f"📥 **【投递箱感知到新任务】** 检测到 `drop_box/{subfolder_name or 'default'}` 投入了新文件：\n\n"
+                            f"📁 **文件**：`{file_path.name}` ({file_size_mb} MB)\n"
                             f"⚠️ **岗位待聘**：当前系统尚未招募负责该业务的官方数字化员工 **【{target_name_cn}】**！\n\n"
                             f"👉 **一键极速入职**：\n"
-                            f"输入 `[EXEC] recruit {rule.target}` 或在顶栏【招募库】点击招募该智能体，系统将自动从云端下载总监卡带及配套技能（封面生成、文案创作），秒级入职后将自动接单处理该视频！"
+                            f"输入 `[EXEC] recruit {rule.target}` 或在顶栏【招募库】点击招募该智能体，系统将自动就绪并接单处理该任务！"
                         )
                     })
                 return False

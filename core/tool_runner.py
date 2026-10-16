@@ -24,6 +24,14 @@ from .registry import Registry
 class ToolRunner:
     """具身工具执行与产物交付引擎"""
 
+    _custom_intent_handlers: List[Any] = []
+
+    @classmethod
+    def register_intent_handler(cls, handler: Any):
+        """注册自定义离线技能意图匹配处理器 (遵循微内核开放扩展律)"""
+        if handler not in cls._custom_intent_handlers:
+            cls._custom_intent_handlers.append(handler)
+
     @classmethod
     def build_tool_system_prompt(cls, agent, base_prompt: str = "") -> str:
         """
@@ -290,21 +298,14 @@ class ToolRunner:
                 return "hello_skill", {"name": name, "topic": topic or "开源实战"}
 
 
-        # 1. B站视频合规元数据与简介生成意图识别 (bili_meta_generator)
-        if "bili_meta_generator" in skills_list:
-            meta_keywords = ("简介", "元数据", "标签", "发布准备", "生成简介", "视频简介")
-            if any(k in msg for k in meta_keywords):
-                topic = ""
-                m_title = re.search(r"《([^》]+)》", msg)
-                if m_title:
-                    topic = m_title.group(1).strip()
-                else:
-                    m_topic = re.search(r"主题(?:是|为|：|:)\s*([^\s，,。\n]+)", msg)
-                    if m_topic:
-                        topic = m_topic.group(1).strip()
-                    else:
-                        topic = "立体空间智能体系统实战"
-                return "bili_meta_generator", {
-                    "topic": topic
-                }
+        # 2. 调度已注册的扩展技能意图识别钩子 (微内核插件式解耦设计)
+        for handler in cls._custom_intent_handlers:
+            try:
+                res = handler(msg, skills_list)
+                if res:
+                    return res
+            except Exception:
+                pass
+
         return None
+

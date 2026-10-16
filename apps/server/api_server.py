@@ -1882,12 +1882,22 @@ def setup(registry):
             self._send_json({"success": False, "error": f"未找到物料包 [{package_id}]"}, status=404)
             return
 
-        self._send_json({
-            "success": False,
-            "error": "当前为开源框架版本，未装载商业 B 站扩展模块"
-        }, status=400)
-        return
+        # 🛡️ 插件式商业能力代理：优先检查商业扩展模块
+        uploader_func = None
+        try:
+            from agents.bili_media_director.tools.bili_uploader import BiliUploader
+            uploader_func = BiliUploader.upload_draft_package
+        except (ImportError, ModuleNotFoundError):
+            uploader_func = None
 
+        if not uploader_func:
+            self._send_json({
+                "success": False,
+                "error": "当前为开源框架底座，未装载商业 B 站发布扩展组件"
+            }, status=400)
+            return
+
+        up_res = uploader_func(target_pkg, chosen_title=chosen_title)
         if up_res.get("success"):
             target_pkg["status"] = "uploaded_to_draft"
             target_pkg["bili_url"] = up_res.get("target", "")

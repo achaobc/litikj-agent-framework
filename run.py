@@ -259,13 +259,15 @@ def run_daemon():
         watcher.stop()
 
 
-def handle_new_command(sub_type: str, name: str, description: str, is_builtin: bool):
+def handle_new_command(sub_type: str, name: str, description: str, is_builtin: bool, category: str = "通用工具"):
     """处理 new 脚手架命令"""
-    from core.scaffold import create_agent_scaffold, create_workflow_scaffold
+    from core.scaffold import create_agent_scaffold, create_workflow_scaffold, create_skill_scaffold
     if sub_type == "agent":
         create_agent_scaffold(name, description, is_custom=not is_builtin)
     elif sub_type == "workflow":
         create_workflow_scaffold(name, description)
+    elif sub_type == "skill":
+        create_skill_scaffold(name, description, category=category, is_custom=not is_builtin)
 
 
 def start_chat_session(agent_name: str = ""):
@@ -397,6 +399,12 @@ def main():
     new_wf_p = new_sub.add_parser("workflow", help="初始化标准流水线脚本")
     new_wf_p.add_argument("name", type=str, help="工作流唯一标识名称")
     new_wf_p.add_argument("-d", "--desc", type=str, default="", help="工作流描述")
+    # new skill
+    new_skill_p = new_sub.add_parser("skill", help="初始化标准技能胶囊工程")
+    new_skill_p.add_argument("name", type=str, help="技能唯一标识名称")
+    new_skill_p.add_argument("-d", "--desc", type=str, default="", help="技能功能描述")
+    new_skill_p.add_argument("-c", "--category", type=str, default="通用工具", help="技能业务分类")
+    new_skill_p.add_argument("--builtin", action="store_true", help="是否作为官方技能放入 skills/official/ (默认放入 skills/custom/)")
 
     args = parser.parse_args()
 
@@ -417,7 +425,8 @@ def main():
             new_parser.print_help()
         else:
             is_builtin = getattr(args, "builtin", False)
-            handle_new_command(args.new_type, args.name, args.desc, is_builtin)
+            category = getattr(args, "category", "通用工具")
+            handle_new_command(args.new_type, args.name, args.desc, is_builtin, category=category)
     elif args.subcommand == "chat":
         start_chat_session(args.agent)
     elif args.subcommand == "gui":
